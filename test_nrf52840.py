@@ -62,6 +62,8 @@ try :
             chest_gX = struct.unpack("6i", packet[8:32])[3]
             chest_gY = struct.unpack("6i", packet[8:32])[4]
             chest_gZ = struct.unpack("6i", packet[8:32])[5]
+
+            #print(packet)
     
             if channel_name == 'C' :
                 file_prefix = "chest_"

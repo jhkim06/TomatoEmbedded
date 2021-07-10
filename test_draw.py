@@ -29,16 +29,19 @@ def animate(i):
     with open(data_dir + "/" + file_prefix + '_data.csv', 'r') as f : 
         #data = pd.read_csv('data.csv')
 
+        # The fist time reading the input file
         if last_pos is None :
             data = f.readlines()
             last_pos = f.tell()
             #print(last_pos)
             if len(data) == 0 :
+                print("Please check the input data, empty file...")
                 return
             else :
-                data = data[1:]
-                if data[0] == 'A_X[mg] A_Y[mg] A_Z[mg] G_X[dps] G_Y[dps] G_Z[dps]' :
+                if len(data) ==  1: # The first line is header i.e., no data yet to draw
                     return
+                else :
+                    data = data[1:]
         else :
             #print("=====================================")
             #print(last_pos)
@@ -93,7 +96,7 @@ def animate(i):
         pc = ax_data_acc.plot(data_az, linewidth=1, label="z")
         ax_data_acc.scatter(len(data_az)-1, data_az[-1], facecolor = pc[0].get_color())
         ax_data_acc.set_ylim(-5e6, 5e6)
-        ax_data_acc.set_title("Chest accelerometer")
+        ax_data_acc.set_title(file_prefix + " accelerometer")
         ax_data_acc.legend(loc='upper left')
 
         ax_data_gyr.plot(data_gx, linewidth=1)
@@ -101,7 +104,7 @@ def animate(i):
         pc = ax_data_gyr.plot(data_gz, linewidth=1)
         ax_data_gyr.scatter(len(data_gz)-1, data_gz[-1], facecolor = pc[0].get_color())
         ax_data_gyr.set_ylim(-5e8, 5e8)
-        ax_data_gyr.set_title("Chest gyroscope")
+        ax_data_gyr.set_title(file_prefix + " gyroscope")
 
 # Chest sensor
 data_ax = collections.deque(np.zeros(1000))
@@ -117,8 +120,8 @@ fig = plt.figure(figsize=(12,6), facecolor="#DEDEDE")
 ax_data_acc = plt.subplot(121)
 ax_data_gyr = plt.subplot(122)
 
-ax_data_acc.set_title("Chest accelerometer")
-ax_data_gyr.set_title("Chest gyroscope")
+ax_data_acc.set_title(file_prefix + " accelerometer")
+ax_data_gyr.set_title(file_prefix + " gyroscope")
 
 ax_data_acc.set_facecolor('#DEDEDE')
 ax_data_gyr.set_facecolor('#DEDEDE')
