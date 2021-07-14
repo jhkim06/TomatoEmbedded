@@ -84,10 +84,6 @@ def animate(i):
 
             prev_window_end_ts = data_ts.popleft()
             data_ts.append(ts_)
-
-            # Initialize window_end_ts
-            if window_end_ts == None :
-                window_end_ts = ts_
             
             data_ax.popleft()
             data_ax.append(ax_)
@@ -107,11 +103,51 @@ def animate(i):
             data_gz.popleft()
             data_gz.append(gz_)
 
-            if prev_window_end_ts == window_end_ts : 
-                window_end_ts = data_ts[-1]
-                #print(WL, " window filled...")
+            if window_end_ts == None :
+                window_end_ts = ts_
 
-                # Predict and show the results in the defined window size
+            else :
+                if prev_window_end_ts == window_end_ts : 
+                    window_end_ts = data_ts[-1]
+                    #print(WL, " window filled...")
+
+                    # Create data frame
+                    series_names    = ["ts", "acc_x", "acc_y", "acc_z", "gyr_x", "gyr_y", "gyr_z", "acc_v", "acc_v2", "gyr_v", "gyr_v2"]
+                    pd_series_ts    = pd.Series(list(data_ts),       range(1, WL+1), name=series_names[0])
+
+                    pd_series_ax    = pd.Series(list(data_ax)[-104], range(1, WL+1), name=series_names[1]) / 1000.
+                    pd_series_ay    = pd.Series(list(data_ay)[-104], range(1, WL+1), name=series_names[2]) / 1000.
+                    pd_series_az    = pd.Series(list(data_az)[-104], range(1, WL+1), name=series_names[3]) / 1000.
+
+                    pd_series_gx    = pd.Series(list(data_gx)[-104], range(1, WL+1), name=series_names[4]) / 1000.
+                    pd_series_gy    = pd.Series(list(data_gy)[-104], range(1, WL+1), name=series_names[5]) / 1000.
+                    pd_series_gz    = pd.Series(list(data_gz)[-104], range(1, WL+1), name=series_names[6]) / 1000.
+
+                    pd_series_acc_v     = (pd_series_ax.pow(2) + pd_series_ay.pow(2) + pd_series_az.pow(2)).pow(0.5)
+                    pd_series_acc_v2    = pd_series_ax.pow(2) + pd_series_ay.pow(2) + pd_series_az.pow(2)
+
+                    pd_series_gyr_v     = (pd_series_gx.pow(2) + pd_series_gy.pow(2) + pd_series_gz.pow(2)).pow(0.5)
+                    pd_series_gyr_v2    = pd_series_gx.pow(2) + pd_series_gy.pow(2) + pd_series_gz.pow(2)
+
+                    temp_dict = {
+                        series_names[0]: pd_series_ts,
+                        series_names[1]: pd_series_ax,
+                        series_names[2]: pd_series_ay,
+                        series_names[3]: pd_series_az,
+                        series_names[4]: pd_series_gx,
+                        series_names[5]: pd_series_gy,
+                        series_names[6]: pd_series_gz,
+
+                        series_names[7]: pd_series_acc_v,
+                        series_names[8]: pd_series_acc_v2,
+                        series_names[9]: pd_series_gyr_v,
+                        series_names[10]: pd_series_gyr_v2,
+                    }
+                    pd_temp = pd.DataFrame(temp_dict)
+                    #print(pd_temp) 
+                    #print(pd_temp.mean(axis=0))
+
+                    # Predict and show the results in the defined window size
 
         ax_data_acc.plot(data_ax, linewidth=1, label="x")
         ax_data_acc.plot(data_ay, linewidth=1, label="y")
@@ -131,7 +167,6 @@ def animate(i):
 # Window Length WL = 104
 # Create a decision tree for stationary, stand up, sit down, walking
 
-# 
 data_ts = collections.deque(np.zeros(WL)) 
 
 data_ax = collections.deque(np.zeros(1000))
