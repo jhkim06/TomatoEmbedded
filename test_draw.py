@@ -10,6 +10,8 @@ import argparse
 plt.style.use('fivethirtyeight')
 
 last_pos = None
+window_start_ts = None
+window_end_ts = None
 data_dir = "./data"
 #file_prefix = "chest_"
 
@@ -19,12 +21,17 @@ parser.add_argument("--input_file_prefix", dest='file_prefix', help='input file 
 args = parser.parse_args()
 file_prefix = args.file_prefix
 
+WL = 104
+
 print("Visualize " + file_prefix + " data...")
+
+# Function to calculate mean
+# Function to calcuate peak-to-peak
 
 def animate(i):
     
     #print("animate function...")
-    global last_pos
+    global last_pos, window_end_ts
 
     with open(data_dir + "/" + file_prefix + '_data.csv', 'r') as f : 
         #data = pd.read_csv('data.csv')
@@ -61,17 +68,26 @@ def animate(i):
             #ch_ = datum.split(',')[0]        
             #print(ch_, type(ch_), ch_ == 'C')
 
-            ax_ = int(datum.split(' ')[0])
-            ay_ = int(datum.split(' ')[1])
-            az_ = int(datum.split(' ')[2])
+            ts_ = int(datum.split(' ')[0])
 
-            gx_ = int(datum.split(' ')[3])
-            gy_ = int(datum.split(' ')[4])
-            gz_ = int(datum.split(' ')[5])
+            ax_ = int(datum.split(' ')[1])
+            ay_ = int(datum.split(' ')[2])
+            az_ = int(datum.split(' ')[3])
+
+            gx_ = int(datum.split(' ')[4])
+            gy_ = int(datum.split(' ')[5])
+            gz_ = int(datum.split(' ')[6])
             #print(index, data)
             #print(az)
             #print(chest)
 
+
+            prev_window_end_ts = data_ts.popleft()
+            data_ts.append(ts_)
+
+            # Initialize window_end_ts
+            if window_end_ts == None :
+                window_end_ts = ts_
             
             data_ax.popleft()
             data_ax.append(ax_)
@@ -91,11 +107,17 @@ def animate(i):
             data_gz.popleft()
             data_gz.append(gz_)
 
+            if prev_window_end_ts == window_end_ts : 
+                window_end_ts = data_ts[-1]
+                #print(WL, " window filled...")
+
+                # Predict and show the results in the defined window size
+
         ax_data_acc.plot(data_ax, linewidth=1, label="x")
         ax_data_acc.plot(data_ay, linewidth=1, label="y")
         pc = ax_data_acc.plot(data_az, linewidth=1, label="z")
         ax_data_acc.scatter(len(data_az)-1, data_az[-1], facecolor = pc[0].get_color())
-        ax_data_acc.set_ylim(-5e6, 5e6)
+        ax_data_acc.set_ylim(-4e3, 4e3)
         ax_data_acc.set_title(file_prefix + " accelerometer")
         ax_data_acc.legend(loc='upper left')
 
@@ -103,10 +125,15 @@ def animate(i):
         ax_data_gyr.plot(data_gy, linewidth=1)
         pc = ax_data_gyr.plot(data_gz, linewidth=1)
         ax_data_gyr.scatter(len(data_gz)-1, data_gz[-1], facecolor = pc[0].get_color())
-        ax_data_gyr.set_ylim(-5e8, 5e8)
+        ax_data_gyr.set_ylim(-4e6, 4e6)
         ax_data_gyr.set_title(file_prefix + " gyroscope")
 
-# Chest sensor
+# Window Length WL = 104
+# Create a decision tree for stationary, stand up, sit down, walking
+
+# 
+data_ts = collections.deque(np.zeros(WL)) 
+
 data_ax = collections.deque(np.zeros(1000))
 data_ay = collections.deque(np.zeros(1000))
 data_az = collections.deque(np.zeros(1000))
