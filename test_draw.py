@@ -7,13 +7,15 @@ import collections
 import numpy as np
 import argparse
 
+import tools.dec_tree_generator as tools
+
 plt.style.use('fivethirtyeight')
 
 last_pos = None
 window_start_ts = None
 window_end_ts = None
 data_dir = "./data"
-#file_prefix = "chest_"
+clf = None
 
 parser = argparse.ArgumentParser(description='A Simple Visualization Tool')
 parser.add_argument("--input_file_prefix", dest='file_prefix', help='input file prefix', default="chest")
@@ -25,13 +27,24 @@ WL = 104
 
 print("Visualize " + file_prefix + " data...")
 
-# Function to calculate mean
-# Function to calcuate peak-to-peak
+
+def count_zero_crossing(queue, threshold) :
+
+    count = 0
+
+    for i in range(1, WL) :
+
+        if queue[i-1] < threshold and threshold < queue[i] :
+            count += 1
+        if queue[i-1] > threshold and threshold > queue[i] :
+            count += 1
+
+    return count
 
 def animate(i):
     
     #print("animate function...")
-    global last_pos, window_end_ts
+    global last_pos, window_end_ts, clf
 
     with open(data_dir + "/" + file_prefix + '_data.csv', 'r') as f : 
         #data = pd.read_csv('data.csv')
@@ -67,7 +80,6 @@ def animate(i):
 
             #ch_ = datum.split(',')[0]        
             #print(ch_, type(ch_), ch_ == 'C')
-
             ts_ = int(datum.split(' ')[0])
 
             ax_ = int(datum.split(' ')[1])
@@ -77,10 +89,6 @@ def animate(i):
             gx_ = int(datum.split(' ')[4])
             gy_ = int(datum.split(' ')[5])
             gz_ = int(datum.split(' ')[6])
-            #print(index, data)
-            #print(az)
-            #print(chest)
-
 
             prev_window_end_ts = data_ts.popleft()
             data_ts.append(ts_)
@@ -107,6 +115,7 @@ def animate(i):
                 window_end_ts = ts_
 
             else :
+                # FEATURE EXTRACTION
                 if prev_window_end_ts == window_end_ts : 
                     window_end_ts = data_ts[-1]
                     #print(WL, " window filled...")
@@ -115,13 +124,13 @@ def animate(i):
                     series_names    = ["ts", "acc_x", "acc_y", "acc_z", "gyr_x", "gyr_y", "gyr_z", "acc_v", "acc_v2", "gyr_v", "gyr_v2"]
                     pd_series_ts    = pd.Series(list(data_ts),       range(1, WL+1), name=series_names[0])
 
-                    pd_series_ax    = pd.Series(list(data_ax)[-104], range(1, WL+1), name=series_names[1]) / 1000.
-                    pd_series_ay    = pd.Series(list(data_ay)[-104], range(1, WL+1), name=series_names[2]) / 1000.
-                    pd_series_az    = pd.Series(list(data_az)[-104], range(1, WL+1), name=series_names[3]) / 1000.
+                    pd_series_ax    = pd.Series(list(data_ax)[-104:], range(1, WL+1), name=series_names[1]) / 1000.
+                    pd_series_ay    = pd.Series(list(data_ay)[-104:], range(1, WL+1), name=series_names[2]) / 1000.
+                    pd_series_az    = pd.Series(list(data_az)[-104:], range(1, WL+1), name=series_names[3]) / 1000.
 
-                    pd_series_gx    = pd.Series(list(data_gx)[-104], range(1, WL+1), name=series_names[4]) / 1000.
-                    pd_series_gy    = pd.Series(list(data_gy)[-104], range(1, WL+1), name=series_names[5]) / 1000.
-                    pd_series_gz    = pd.Series(list(data_gz)[-104], range(1, WL+1), name=series_names[6]) / 1000.
+                    pd_series_gx    = pd.Series(list(data_gx)[-104:], range(1, WL+1), name=series_names[4]) / 1000. * 0.017453 # dps to rad/s
+                    pd_series_gy    = pd.Series(list(data_gy)[-104:], range(1, WL+1), name=series_names[5]) / 1000. * 0.017453
+                    pd_series_gz    = pd.Series(list(data_gz)[-104:], range(1, WL+1), name=series_names[6]) / 1000. * 0.017453
 
                     pd_series_acc_v     = (pd_series_ax.pow(2) + pd_series_ay.pow(2) + pd_series_az.pow(2)).pow(0.5)
                     pd_series_acc_v2    = pd_series_ax.pow(2) + pd_series_ay.pow(2) + pd_series_az.pow(2)
@@ -146,8 +155,22 @@ def animate(i):
                     pd_temp = pd.DataFrame(temp_dict)
                     #print(pd_temp) 
                     #print(pd_temp.mean(axis=0))
+                    #print(pd_temp.max(axis=0)-pd_temp.min(axis=0))
+                    #print("zero crossing of acc ax: ", count_zero_crossing(list(data_ax)[-104:], 0))
+                    mean_pd_temp = pd_temp.mean(axis=0)
+                    peak_to_peak_pd_temp = pd_temp.max(axis=0)-pd_temp.min(axis=0)
+                    feature_list = [mean_pd_temp["acc_x"],         mean_pd_temp["acc_y"],         mean_pd_temp["acc_z"],         mean_pd_temp["acc_v"],         mean_pd_temp["acc_v2"],
+                                    mean_pd_temp["gyr_x"],         mean_pd_temp["gyr_y"],         mean_pd_temp["gyr_z"],         mean_pd_temp["gyr_v"],         mean_pd_temp["gyr_v2"],
+                                    peak_to_peak_pd_temp["acc_x"], peak_to_peak_pd_temp["acc_y"], peak_to_peak_pd_temp["acc_z"], peak_to_peak_pd_temp["acc_v"], peak_to_peak_pd_temp["acc_v2"], 
+                                    peak_to_peak_pd_temp["gyr_x"], peak_to_peak_pd_temp["gyr_y"], peak_to_peak_pd_temp["gyr_z"], peak_to_peak_pd_temp["gyr_v"], peak_to_peak_pd_temp["gyr_v2"], 
+                                    count_zero_crossing(list(data_ax)[-104:], 0), count_zero_crossing(list(data_ax)[-104:], 0), count_zero_crossing(list(data_ax)[-104:], 0),
+                                    count_zero_crossing(list(data_gx)[-104:], 0), count_zero_crossing(list(data_gx)[-104:], 0), count_zero_crossing(list(data_gx)[-104:], 0)] 
+
+                    #print("feature: ", feature_list) 
 
                     # Predict and show the results in the defined window size
+                    y_pred = clf.predict([feature_list])
+                    print("y_pred: ", y_pred, " probability: ", clf.predict_proba([feature_list]))
 
         ax_data_acc.plot(data_ax, linewidth=1, label="x")
         ax_data_acc.plot(data_ay, linewidth=1, label="y")
@@ -166,6 +189,10 @@ def animate(i):
 
 # Window Length WL = 104
 # Create a decision tree for stationary, stand up, sit down, walking
+arff_filename = "/Volumes/Samsung_T3/TomatoCrew/TomatoEmbedded/data/junsang/first_trial.arff"
+dectree_filename = "/Volumes/Samsung_T3/TomatoCrew/TomatoEmbedded/data/junsang/dectree.txt"
+
+clf = tools.generateDecisionTree(arff_filename, dectree_filename)
 
 data_ts = collections.deque(np.zeros(WL)) 
 
