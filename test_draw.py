@@ -9,6 +9,8 @@ import argparse
 import time
 
 import tools.dec_tree_generator as tools
+from scipy import signal
+from scipy import fftpack
 
 plt.style.use('fivethirtyeight')
 
@@ -20,12 +22,13 @@ clf = None
 
 parser = argparse.ArgumentParser(description='A Simple Visualization Tool')
 parser.add_argument("--input_file_prefix", dest='file_prefix', help='input file prefix', default="chest")
-parser.add_argument("--replay", dest='replay', help='replay as in the raw file', action='store_true')
-parser.add_argument("--predict", dest='predict', help='predict', default="False")
+parser.add_argument("--replay", dest='replay', help='replay as in the raw file', default=False, action='store_true')
+parser.add_argument("--predict", dest='predict', help='predict', default=False, action='store_true')
 
 args = parser.parse_args()
 file_prefix = args.file_prefix
 replay = args.replay
+predict = args.predict
 
 if replay :
     print("Replay raw input data...")
@@ -204,10 +207,24 @@ def animate(i):
                     #print("feature: ", feature_list) 
 
                     # Predict and show the results in the defined window size
-                    y_pred = clf.predict([feature_list])
-                    print("y_pred: ", y_pred, " probability: ", clf.predict_proba([feature_list]))
+                    if predict : 
+                        y_pred = clf.predict([feature_list])
+                        print("y_pred: ", y_pred, " probability: ", clf.predict_proba([feature_list]))
+
+        # Filter test
+        b, a = signal.butter(3, 0.02)
+        zi = signal.lfilter_zi(b, a)
+        z, _ = signal.lfilter(b, a, data_ax, zi=zi*data_ay[0])
+        z2, _ = signal.lfilter(b, a, z, zi=zi*z[0])
+        z3, _ = signal.lfilter(b, a, z, zi=zi*z2[0])
+        y = signal.filtfilt(b, a, data_ay)
+
+        #X = fftpack.fft(y)
+        #freqs = fftpack.fftfreq(len(y)) * 208 
+        #print("freqs: ", freqs)
 
         ax_data_acc.plot(data_ax, linewidth=1, label="x")
+        ax_data_acc.plot(y, 'r--', linewidth=1, label="y filtered")
         ax_data_acc.plot(data_ay, linewidth=1, label="y")
         pc = ax_data_acc.plot(data_az, linewidth=1, label="z")
         ax_data_acc.scatter(len(data_az)-1, data_az[-1], facecolor = pc[0].get_color())
