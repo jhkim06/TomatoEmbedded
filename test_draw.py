@@ -140,6 +140,10 @@ def animate(i):
             data_az.popleft()
             data_az.append(az_)
 
+            data_av.popleft()
+            av_ = pow(pow(ax_, 2) + pow(ay_, 2) + pow(az_, 2), 0.5)
+            data_av.append(av_)
+
             data_gx.popleft()
             data_gx.append(gx_)
 
@@ -212,7 +216,7 @@ def animate(i):
                         print("y_pred: ", y_pred, " probability: ", clf.predict_proba([feature_list]))
 
         # Filter test
-        b, a = signal.butter(3, 0.02)
+        b, a = signal.butter(3, 0.01)
         zi = signal.lfilter_zi(b, a)
         z, _ = signal.lfilter(b, a, data_ax, zi=zi*data_ay[0])
         z2, _ = signal.lfilter(b, a, z, zi=zi*z[0])
@@ -227,6 +231,7 @@ def animate(i):
         ax_data_acc.plot(y, 'r--', linewidth=1, label="y filtered")
         ax_data_acc.plot(data_ay, linewidth=1, label="y")
         pc = ax_data_acc.plot(data_az, linewidth=1, label="z")
+        ax_data_acc.plot(data_av, linewidth=1, label="v")
         ax_data_acc.scatter(len(data_az)-1, data_az[-1], facecolor = pc[0].get_color())
         ax_data_acc.set_ylim(-4e3, 4e3)
         ax_data_acc.set_title(file_prefix + " accelerometer")
@@ -251,6 +256,7 @@ data_ts = collections.deque(np.zeros(WL))
 data_ax = collections.deque(np.zeros(1000))
 data_ay = collections.deque(np.zeros(1000))
 data_az = collections.deque(np.zeros(1000))
+data_av = collections.deque(np.zeros(1000))
 
 data_gx = collections.deque(np.zeros(1000))
 data_gy = collections.deque(np.zeros(1000))
